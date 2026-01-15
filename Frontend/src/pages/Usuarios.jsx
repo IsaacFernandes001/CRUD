@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { cadastrarUsuario, listarTodosUsuarios, deletarUsuario } from "../services/usuarios.service";
+import { cadastrarUsuario, listarTodosUsuarios, deletarUsuario, editarUsuario } from "../services/usuarios.service";
 import { Alert, Box, Button, Container, IconButton, Modal, Paper, Snackbar, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -22,11 +22,14 @@ export default function Usuarios(){
     const[nome, setNome] = useState('');
     const[email, setEmail] = useState('');
 
-      const [open, setOpen] = useState(false);
-      const handleOpen = () => setOpen(true);
-      const handleClose = () => setOpen(false);
-
       const [openAlert, setOpenAlert] = useState(false);
+      const [openAlertDelete, setOpenAlert2] = useState(false);
+      const [openAlertEdit, setOpenAlertEdit] = useState(false);
+
+      const [openCreate, setOpenCreate] = useState(false);
+      const [openEdit, setOpenEdit] = useState(false);
+      const [usuarioEditando, setUsuarioEditando] = useState(null);
+
 
 
     useEffect(() => {
@@ -40,7 +43,6 @@ export default function Usuarios(){
     async function Salvar() {
       try{
         const novoUsuario = await cadastrarUsuario({nome, email});
-        setOpen(false);
         setOpenAlert(true);
         setNome('');
         setEmail('');
@@ -52,19 +54,48 @@ export default function Usuarios(){
     }
 
     async function Deletar(id){
-      try{
-        const confirm = window.alert('Deseja mesmo deletar usuário');
-        if(confirm) return;
+      try {
+        const confirmacao = window.confirm('Deseja mesmo deletar usuário?');
+        if (!confirmacao) return;
+
         await deletarUsuario(id);
-      }catch (error) {
+
+        setUsuarios(prev =>
+          prev.filter(usuario => usuario.id !== id)
+        );
+
+        setOpenAlert2(true);
+      } catch (error) {
         console.log("Erro ao deletar usuário.", error);
       }
-    }
+  }
+  async function Editar() {
+  try {
+    await editarUsuario(usuarioEditando.id, {
+      nome,
+      email
+    });
+
+    const usuariosAtualizados = await listarTodosUsuarios();
+    setUsuarios(usuariosAtualizados);
+
+    setOpenAlertEdit(true);
+    setOpenEdit(false);
+    setOpenEdit(true);
+    setNome('');
+    setEmail('');
+    setUsuarioEditando(null);
+
+  } catch (error) {
+    console.log("Erro ao editar usuário", error);
+  }
+}
+
 
     return(
         <Container>
-          <Button variant="contained" sx={{marginTop: 2, padding: 1.5, marginBlock: 4}} onClick={handleOpen}>
-            Novo Usuário
+          <Button onClick={() => setOpenCreate(true)} variant="contained" sx={{marginTop: 2, padding: 1.5, marginBlock: 4}}>
+           Novo Usuário
           </Button>
           <TableContainer component={Paper}>
             <Table sx={{ minWidth: 650 }} aria-label="simple table">
@@ -87,9 +118,18 @@ export default function Usuarios(){
                     <TableCell align="center">{item.nome}</TableCell>
                     <TableCell align="center">{item.email}</TableCell>
                     <TableCell align="center">
-                    <IconButton aria-label="editar" color="warning">
-                          <EditIcon />
-                      </IconButton>
+                    <IconButton
+                      color="warning"
+                      aria-label="editar"
+                      onClick={() => {
+                        setUsuarioEditando(item);
+                        setNome(item.nome);
+                        setEmail(item.email);
+                        setOpenEdit(true);
+                      }}
+                    >
+                      <EditIcon />
+                    </IconButton>
                     </TableCell>
                     <TableCell align="center">
                       <IconButton aria-label="deletar" color="error">
@@ -102,10 +142,8 @@ export default function Usuarios(){
             </Table>
           </TableContainer>
 
-          <Modal
-            open={open}
-            onClose={handleClose}
-          >
+          <Modal open={openCreate} onClose={() => setOpenCreate(false)}>
+
             <Box sx={style}>
               <Typography id="modal-modal-title" component="h2">
                  Novo Usuário
@@ -148,7 +186,69 @@ export default function Usuarios(){
           >
           Usuário cadastrado com sucesso!
         </Alert>
+      </Snackbar>
+
+      
+      <Snackbar 
+        open={openAlertDelete}
+        autoHideDuration={3000}
+        onClose={() => setOpenAlert2(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: "right"}}
+      >
+        <Alert
+          onClose={( () => setOpenAlert2(false))}
+          severity="success"
+          variant="filled"
+          sx={{ width: '100%'}}
+          >
+          Usuário deletado com sucesso!
+        </Alert>
         
+      </Snackbar>
+
+      {/*Modal Editar*/}
+      <Modal open={openEdit} onClose={() => setOpenEdit(false)}>
+
+            <Box sx={style}>
+              <Typography id="modal-modal-title" component="h2">
+                 Editar Usuário
+              </Typography>
+              <TextField 
+              id="filled-basic" 
+              label="Nome" 
+              variant="filled" 
+              sx={{width:"100%", marginTop:2}}
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              />
+              <TextField 
+              id="filled-basic" 
+              label="Email" 
+              variant="filled" 
+              sx={{width:"100%", marginTop:2}}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              />
+              <Button onClick={Editar} variant="contained" 
+                sx={{marginTop: 2}}>
+                Salvar Alterações
+              </Button>
+            </Box>
+      </Modal>
+      <Snackbar 
+        open={openAlertEdit}
+        autoHideDuration={3000}
+        onClose={() => setOpenEdit(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: "right"}}
+      >
+        <Alert
+          onClose={( () => setOpenEdit(false))}
+          severity="success"
+          variant="filled"
+          sx={{ width: '100%'}}
+          >
+          Usuário editado com sucesso!
+        </Alert>
       </Snackbar>
         </Container>
     )

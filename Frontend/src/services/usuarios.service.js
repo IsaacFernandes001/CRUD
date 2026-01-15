@@ -15,3 +15,7 @@ export async function deletarUsuario(id){
     return resposta.data;
 }
 
+export async function editarUsuario(id, dados){
+    const resposta = await api.put(`/usuarios/${id}`, dados);
+    return resposta.data;
+}
